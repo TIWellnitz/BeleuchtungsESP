@@ -2,24 +2,41 @@ import time
 import counter
 import ldr
 import ir_emitter
-import _thread
+import select
+import machine
+import sys
 
 
-print("warte 20 Sekunden um Programm abbrechen zu können")
-time.sleep(20)
+print("warte 10 Sekunden um Programm abbrechen zu können")
+time.sleep(10)
 
 
 sleep_counter = 0
 last_counter_send = 0
 
-def ir_receive():
-    while True:
-        ir_emitter.get_ir()
-        
-_thread.start_new_thread(ir_receive, ())
+def handle_input():
+    #USB-Puffer auf Daten prüfen
+    if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+        line = sys.stdin.readline().strip()
+        if not line:
+            return
+
+        #Reset-Check
+        if line == "RESET_NOW":
+            print("Reset-Befehl erkannt!")
+            machine.reset()
+
+        #IR-Check: Zeile an Emitter weitergeben
+        elif line.startswith('['):
+            ir_emitter.get_ir(line) 
+
+        else:
+            print(f"INFO;Empfangen: {line}")
+
 
 while True:
     time.sleep_ms(10)
+    handle_input()
 
     try:
         current_time = time.ticks_ms()
